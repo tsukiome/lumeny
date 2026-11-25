@@ -1,73 +1,66 @@
 import os
-import sqlite3
+import asyncpg
 
-# На Render без Persistent Disk файл стирается при каждом деплое.
-# Смонтируй диск и задай DB_PATH=/data/bot.db (позже можно перейти на Postgres).
-PATH = os.getenv("DB_PATH", "dota.db")
+_pool = None
 
 
-def _c():
-    return sqlite3.connect(PATH)
+async def init():
+    global _pool
+    if _pool:
+        return
+    _pool = await asyncpg.create_pool(
+        os.environ["DATABASE_URL"], min_size=1, max_size=5,
+        statement_cache_size=0, max_inactive_connection_lifetime=60)
+    await _pool.execute("""
+    CREATE TABLE IF NOT EXISTS users(tg_id BIGINT PRIMARY KEY, account_id BIGINT);
+    CREATE TABLE IF NOT EXISTS watch(
+        tg_id BIGINT, account_id BIGINT, name TEXT, last_match BIGINT DEFAULT 0,
+        PRIMARY KEY(tg_id, account_id));
+    CREATE TABLE IF NOT EXISTS scores(tg_id BIGINT PRIMARY KEY, name TEXT, points INT DEFAULT 0);
+    """)
 
 
-def init():
-    with _c() as c:
-        c.executescript("""
-        CREATE TABLE IF NOT EXISTS users(tg_id INTEGER PRIMARY KEY, account_id INTEGER);
-        CREATE TABLE IF NOT EXISTS watch(
-            tg_id INTEGER, account_id INTEGER, name TEXT, last_match INTEGER DEFAULT 0,
-            PRIMARY KEY(tg_id, account_id));
-        CREATE TABLE IF NOT EXISTS scores(tg_id INTEGER PRIMARY KEY, name TEXT, points INTEGER DEFAULT 0);
-        """)
+async def set_account(tg_id, acc):
+    await _pool.execute(
+        "INSERT INTO users VALUES($1,$2) ON CONFLICT (tg_id) DO UPDATE SET account_id=EXCLUDED.account_id",
+        tg_id, acc)
 
 
-def set_account(tg_id, acc):
-    with _c() as c:
-        c.execute("INSERT OR REPLACE INTO users VALUES(?,?)", (tg_id, acc))
+async def get_account(tg_id):
+    return await _pool.fetchval("SELECT account_id FROM users WHERE tg_id=$1", tg_id)
 
 
-def get_account(tg_id):
-    with _c() as c:
-        r = c.execute("SELECT account_id FROM users WHERE tg_id=?", (tg_id,)).fetchone()
-    return r[0] if r else None
+async def watch(tg_id, acc, name, last):
+    await _pool.execute(
+        "INSERT INTO watch VALUES($1,$2,$3,$4) ON CONFLICT (tg_id, account_id) "
+        "DO UPDATE SET name=EXCLUDED.name, last_match=EXCLUDED.last_match", tg_id, acc, name, last)
 
 
-def watch(tg_id, acc, name, last):
-    with _c() as c:
-        c.execute("INSERT OR REPLACE INTO watch VALUES(?,?,?,?)", (tg_id, acc, name, last))
+async def unwatch(tg_id, acc):
+    await _pool.execute("DELETE FROM watch WHERE tg_id=$1 AND account_id=$2", tg_id, acc)
 
 
-def unwatch(tg_id, acc):
-    with _c() as c:
-        c.execute("DELETE FROM watch WHERE tg_id=? AND account_id=?", (tg_id, acc))
+async def my_watch(tg_id):
+    return await _pool.fetch("SELECT account_id, name FROM watch WHERE tg_id=$1", tg_id)
 
 
-def my_watch(tg_id):
-    with _c() as c:
-        return c.execute("SELECT account_id, name FROM watch WHERE tg_id=?", (tg_id,)).fetchall()
+async def watched_accounts():
+    return [r[0] for r in await _pool.fetch("SELECT DISTINCT account_id FROM watch")]
 
 
-def watched_accounts():
-    with _c() as c:
-        return [r[0] for r in c.execute("SELECT DISTINCT account_id FROM watch")]
+async def subscribers(acc):
+    return await _pool.fetch("SELECT tg_id, name, last_match FROM watch WHERE account_id=$1", acc)
 
 
-def subscribers(acc):
-    with _c() as c:
-        return c.execute("SELECT tg_id, name, last_match FROM watch WHERE account_id=?", (acc,)).fetchall()
+async def set_last(tg_id, acc, match_id):
+    await _pool.execute("UPDATE watch SET last_match=$1 WHERE tg_id=$2 AND account_id=$3", match_id, tg_id, acc)
 
 
-def set_last(tg_id, acc, match_id):
-    with _c() as c:
-        c.execute("UPDATE watch SET last_match=? WHERE tg_id=? AND account_id=?", (match_id, tg_id, acc))
+async def add_point(tg_id, name):
+    await _pool.execute(
+        "INSERT INTO scores VALUES($1,$2,1) ON CONFLICT (tg_id) "
+        "DO UPDATE SET points=scores.points+1, name=EXCLUDED.name", tg_id, name)
 
 
-def add_point(tg_id, name):
-    with _c() as c:
-        c.execute("INSERT OR IGNORE INTO scores(tg_id, name, points) VALUES(?,?,0)", (tg_id, name))
-        c.execute("UPDATE scores SET points=points+1, name=? WHERE tg_id=?", (name, tg_id))
-
-
-def top(n=10):
-    with _c() as c:
-        return c.execute("SELECT name, points FROM scores ORDER BY points DESC LIMIT ?", (n,)).fetchall()
+async def top(n=10):
+    return await _pool.fetch("SELECT name, points FROM scores ORDER BY points DESC LIMIT $1", n)
