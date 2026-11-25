@@ -19,10 +19,10 @@ BASE_URL = (os.getenv("BASE_URL") or os.getenv("RENDER_EXTERNAL_URL") or "").rst
 main_router = Router()
 
 
-def app_keyboard(user_id: int):
+async def app_keyboard(user_id: int):
     if not BASE_URL:
         return None
-    acc = db.get_account(user_id)
+    acc = await db.get_account(user_id)
     url = f"{BASE_URL}/app" + (f"?acc={acc}" if acc else "")
     return InlineKeyboardMarkup(inline_keyboard=[[
         InlineKeyboardButton(text="📱 Открыть мини-апп", web_app=WebAppInfo(url=url))]])
@@ -33,13 +33,13 @@ async def start(m: Message):
     await m.answer(
         "Привет! Я Lumeny — бот для Dota 2: профиль, разбор матчей, уведомления о катках друзей и викторина.\n\n"
         "Начни с привязки аккаунта: /link ВАШ_ID\nВсе команды: /dota",
-        reply_markup=app_keyboard(m.from_user.id),
+        reply_markup=await app_keyboard(m.from_user.id),
     )
 
 
 @main_router.message(Command("app"))
 async def app_cmd(m: Message):
-    kb = app_keyboard(m.from_user.id)
+    kb = await app_keyboard(m.from_user.id)
     if kb:
         await m.answer("Твой профиль в мини-аппе:", reply_markup=kb)
     else:
@@ -47,7 +47,7 @@ async def app_cmd(m: Message):
 
 
 async def main():
-    db.init()
+    await db.init()
     bot = Bot(TOKEN)
     dp = Dispatcher()
     dp.include_router(main_router)
