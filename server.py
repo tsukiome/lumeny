@@ -58,6 +58,7 @@ def make_app():
         web.get("/", health),
         web.get("/health", health),
         web.get("/app", index),
+        web.get("/app/", index),
         web.get("/api/profile/{acc}", profile),
     ])
     return app
