@@ -2,108 +2,250 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Lumeny</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-:root{
-  --bg:var(--tg-theme-bg-color,#fff);--text:var(--tg-theme-text-color,#1b1f24);
-  --hint:var(--tg-theme-hint-color,#6b7480);--card:var(--tg-theme-secondary-bg-color,#f2f4f6);
-  --btn:var(--tg-theme-button-color,#2f7d4f);--btn-text:var(--tg-theme-button-text-color,#fff);
-  --radiant:#3f9b5c;--dire:#c4473a;
-}
-*{box-sizing:border-box}
-body{margin:0;padding:16px 16px 32px;background:var(--bg);color:var(--text);
-  font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-h1{font-size:24px;margin:0 0 2px}
-h2{font-size:15px;margin:24px 0 8px;color:var(--hint);font-weight:600}
-.sub{color:var(--hint);margin:0 0 16px}
-form{display:flex;gap:8px;margin-bottom:8px}
-input{flex:1;min-width:0;padding:12px;border-radius:10px;border:1px solid var(--card);
-  background:var(--card);color:var(--text);font:inherit}
-button{padding:12px 16px;border:0;border-radius:10px;background:var(--btn);color:var(--btn-text);font:inherit;font-weight:600}
-.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--dire)}
-.bar i{background:var(--radiant);display:block}
-.stats{display:flex;justify-content:space-between;margin:6px 0 0;color:var(--hint);font-size:14px}
-.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;
-  background:var(--card);border-radius:10px;margin-bottom:6px;border-left:4px solid var(--hint)}
-.row.w{border-left-color:var(--radiant)}.row.l{border-left-color:var(--dire)}
-.row small{color:var(--hint);display:block}
-.err{color:var(--dire);margin:12px 0}
-@media (prefers-reduced-motion:no-preference){.bar i{transition:width .5s}}
+:root{--bg:#000;--tx:#fff;--mu:rgba(235,235,245,.6);--ac:#0a84ff;--on-ac:#fff;--win:#30d158;--loss:#ff453a;
+  --s1:rgba(255,255,255,.08);--s2:rgba(255,255,255,.15);--line:rgba(255,255,255,.14);--hl:rgba(255,255,255,.22);
+  --b1:rgba(10,132,255,.38);--b2:rgba(191,90,242,.30);--b3:rgba(48,209,88,.20);--shadow:0 8px 30px rgba(0,0,0,.35)}
+:root[data-theme="light"]{--bg:#f2f2f7;--tx:#000;--mu:rgba(60,60,67,.6);--ac:#007aff;--win:#34c759;--loss:#ff3b30;
+  --s1:rgba(255,255,255,.62);--s2:rgba(255,255,255,.88);--line:rgba(255,255,255,.9);--hl:rgba(255,255,255,.95);
+  --b1:rgba(0,122,255,.22);--b2:rgba(175,82,222,.18);--b3:rgba(52,199,89,.16);--shadow:0 8px 30px rgba(60,60,90,.12)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;color:var(--tx);font:17px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+  padding:18px 16px calc(112px + env(safe-area-inset-bottom));min-height:100vh;
+  background:radial-gradient(60% 38% at 12% 0%,var(--b1),transparent 72%),radial-gradient(50% 34% at 100% 32%,var(--b2),transparent 72%),
+    radial-gradient(60% 40% at 0% 100%,var(--b3),transparent 72%),var(--bg);background-attachment:fixed}
+h1{font-size:32px;line-height:1.15;font-weight:700;letter-spacing:-.02em;margin:0}
+h2{font-size:13px;margin:28px 0 8px 6px;color:var(--mu);font-weight:600}
+.sub{color:var(--mu);margin:4px 0 16px;font-size:15px}
+.card,.row,.tile,input,select,.chip,button.ghost,nav{background:var(--s1);border:1px solid var(--line);
+  box-shadow:inset 0 1px 0 var(--hl),var(--shadow);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.card,.row,.tile,input,select,.chip,button.ghost,nav{background:var(--s2)}}
+.head{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+.av{width:60px;height:60px;border-radius:50%;background:var(--s2);border:1px solid var(--line);box-shadow:inset 0 1px 0 var(--hl);
+  display:grid;place-items:center;font-size:26px;font-weight:600;color:var(--ac);flex:none}
+.head p{margin:2px 0 0;color:var(--mu);font-size:15px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tile{border-radius:22px;padding:14px 8px;text-align:center}
+.tile b{display:block;font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}.tile span{font-size:12px;color:var(--mu)}
+.card{border-radius:22px;padding:16px;margin-bottom:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;border-radius:18px;padding:13px 16px;margin-bottom:8px}
+.row.w{box-shadow:inset 3px 0 0 var(--win),inset 0 1px 0 var(--hl),var(--shadow)}
+.row.l{box-shadow:inset 3px 0 0 var(--loss),inset 0 1px 0 var(--hl),var(--shadow)}
+.row small{display:block;color:var(--mu);font-size:14px}
+.bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--loss);margin:14px 4px 4px}
+.bar i{background:var(--win);display:block}
+input,select{width:100%;padding:13px 16px;border-radius:14px;color:var(--tx);font:inherit;margin-bottom:10px;outline:none}
+input:focus,select:focus{border-color:var(--ac)}
+input::placeholder{color:var(--mu)}
+button{padding:13px 18px;border:0;border-radius:14px;background:var(--ac);color:var(--on-ac);font:inherit;font-weight:600;cursor:pointer}
+button.ghost{color:var(--tx)}button:disabled{opacity:.5}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:9px 14px;border-radius:999px;color:var(--tx);font-weight:500;font-size:15px}
+.chip.sel{background:var(--loss);border-color:var(--loss);color:#fff}
+.err{color:var(--loss);margin:10px 0}.big{font-size:40px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:2px 0}
+.acts{display:flex;gap:10px}.acts button{flex:1}
+nav{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));display:flex;gap:2px;border-radius:30px;padding:6px}
+nav button{flex:1;background:none;border:0;box-shadow:none;color:var(--mu);font-weight:600;font-size:12px;padding:11px 0;border-radius:24px}
+nav button.on{background:var(--s2);color:var(--ac);box-shadow:inset 0 1px 0 var(--hl)}
 </style>
 </head>
 <body>
 <div id="root"></div>
+<nav id="nav"></nav>
 <script>
 const tg = window.Telegram && Telegram.WebApp;
 if (tg) { tg.ready(); tg.expand(); }
-const root = document.getElementById("root");
-
-function el(tag, props = {}, ...kids) {
-  const n = document.createElement(tag);
-  Object.assign(n, props);
-  kids.flat().forEach(k => n.append(k));
-  return n;
-}
-function store(key, val) {
-  try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch (e) { return null; }
-}
+document.documentElement.dataset.theme = (tg && tg.colorScheme) || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+const root = document.getElementById("root"), nav = document.getElementById("nav");
+const el = (t, p = {}, ...k) => { const n = document.createElement(t); Object.assign(n, p); k.flat().forEach(x => n.append(x)); return n; };
+function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
 const mmss = s => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+const empty = t => el("p", { className: "sub", textContent: t });
+const sec = t => el("h2", { textContent: t });
+async function api(path, opts = {}) {
+  opts.headers = { "Content-Type": "application/json", "X-Init-Data": tg ? tg.initData : "", ...(opts.headers || {}) };
+  const r = await fetch(path, opts), d = await r.json();
+  if (!r.ok) throw new Error(d.error || "Ошибка");
+  return d;
+}
+let acc = new URLSearchParams(location.search).get("acc") || store("acc"), data = null, tab = "profile", timer = null;
+const TABS = [["profile", "Профиль"], ["matches", "Матчи"], ["pick", "Пикер"], ["party", "Пати"], ["more", "Ещё"]];
 
-function form(msg) {
+function go(t) {
+  tab = t; clearInterval(timer);
+  nav.replaceChildren(...TABS.map(([id, label]) => { const b = el("button", { textContent: label, className: (id === t || (id === "more" && SUB.includes(t))) ? "on" : "" }); b.onclick = () => go(id); return b; }));
+  ({ profile: profileTab, matches: matchesTab, pick: pickTab, party: partyTab, more: moreTab, timers: timersTab, quiz: quizTab, news: newsTab })[t]();
+}
+function idForm(msg) {
   const input = el("input", { placeholder: "Friend ID или Steam64", inputMode: "numeric" });
   const f = el("form", {}, input, el("button", { textContent: "Показать" }));
   f.onsubmit = e => { e.preventDefault(); if (input.value.trim()) load(input.value.trim()); };
-  return [el("h1", { textContent: "Lumeny" }), el("p", { className: "sub", textContent: "Профиль Dota 2" }), f,
-          msg ? el("div", { className: "err", textContent: msg }) : ""];
+  return [el("h1", { textContent: "Lumeny" }), empty("Введи свой ID из Dota 2"), f, msg ? el("div", { className: "err", textContent: msg }) : ""];
 }
-
-async function load(acc) {
-  root.replaceChildren(el("p", { className: "sub", textContent: "Загружаю…" }));
-  try {
-    const r = await fetch("/api/profile/" + encodeURIComponent(acc));
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || "Ошибка");
-    store("acc", acc);
-    render(d);
-  } catch (e) {
-    root.replaceChildren(...form(e.message));
-  }
+async function load(a) {
+  root.replaceChildren(empty("Загружаю…"));
+  try { data = await api("/api/profile/" + encodeURIComponent(a)); acc = a; store("acc", a); go(tab); }
+  catch (e) { data = null; root.replaceChildren(...idForm(e.message)); }
 }
+const tile = (v, l) => el("div", { className: "tile" }, el("b", { textContent: v }), el("span", { textContent: l }));
 
-function render(d) {
-  const total = d.win + d.lose;
-  const pct = total ? (d.win / total * 100) : 0;
-  const bar = el("div", { className: "bar" }, el("i", { style: "width:" + pct + "%" }));
-  const again = el("button", { textContent: "Другой игрок" });
-  again.onclick = () => root.replaceChildren(...form());
+function profileTab() {
+  if (!data) return root.replaceChildren(...idForm());
+  const d = data, total = d.win + d.lose, pct = total ? d.win / total * 100 : 0;
+  const other = el("button", { className: "ghost", textContent: "Другой игрок" });
+  other.onclick = () => { data = null; store("acc", null); root.replaceChildren(...idForm()); };
   root.replaceChildren(
-    el("h1", { textContent: d.name }),
-    el("p", { className: "sub", textContent: d.rank }),
-    bar,
-    el("div", { className: "stats" },
-      el("span", { textContent: d.win + " побед" }),
-      el("span", { textContent: total ? pct.toFixed(1) + "%" : "—" }),
-      el("span", { textContent: d.lose + " поражений" })),
-    el("h2", { textContent: "Любимые герои" }),
-    d.heroes.length ? d.heroes.map(h => el("div", { className: "row" },
-      el("span", { textContent: h.name }),
-      el("span", { textContent: h.games + " игр, " + Math.round(h.win / h.games * 100) + "%" })))
-      : el("p", { className: "sub", textContent: "Нет данных" }),
-    el("h2", { textContent: "Последние матчи" }),
-    d.matches.length ? d.matches.map(m => el("div", { className: "row " + (m.win ? "w" : "l") },
+    el("div", { className: "head" }, el("div", { className: "av", textContent: d.name.charAt(0).toUpperCase() }),
+      el("div", {}, el("h1", { textContent: d.name }), el("p", { textContent: d.rank }))),
+    el("div", { className: "tiles" }, tile(d.win, "победы"), tile(d.lose, "поражения"), tile(total ? pct.toFixed(0) + "%" : "—", "винрейт")),
+    el("div", { className: "bar" }, el("i", { style: "width:" + pct + "%" })),
+    sec("Любимые герои"),
+    d.heroes.length ? d.heroes.map(h => el("div", { className: "row" }, el("span", { textContent: h.name }),
+      el("span", { textContent: h.games + " игр, " + Math.round(h.win / h.games * 100) + "%" }))) : empty("Нет данных: включи в Dota публичную историю матчей."),
+    el("p", {}, other));
+}
+function matchesTab() {
+  if (!data) return root.replaceChildren(...idForm());
+  root.replaceChildren(el("h1", { textContent: "Матчи" }), empty("Последние 10 игр"),
+    data.matches.length ? data.matches.map(m => el("div", { className: "row " + (m.win ? "w" : "l") },
       el("span", {}, m.hero, el("small", { textContent: (m.win ? "Победа" : "Поражение") + ", " + mmss(m.duration) })),
-      el("b", { textContent: m.k + "/" + m.d + "/" + m.a })))
-      : el("p", { className: "sub", textContent: "Матчей нет или история скрыта" }),
-    el("p", {}, again)
-  );
+      el("b", { textContent: m.k + "/" + m.d + "/" + m.a }))) : empty("Матчей нет или история скрыта."));
 }
 
-const fromUrl = new URLSearchParams(location.search).get("acc");
-const acc = fromUrl || store("acc");
-acc ? load(acc) : root.replaceChildren(...form());
+let heroes = null, enemies = [];
+async function pickTab() {
+  const search = el("input", { placeholder: "Найти героя врага" }), list = el("div", { className: "chips" });
+  const sel = el("div", { className: "chips" }), res = el("div");
+  root.replaceChildren(el("h1", { textContent: "Пикер" }), empty("Выбери до 5 героев врага, я подскажу, кого брать"),
+    search, list, sec("Враги"), sel, sec("Лучшие ответы"), res);
+  if (!heroes) { try { heroes = await api("/api/heroes"); } catch (e) { return list.append(empty("Не удалось загрузить героев")); } }
+  const drawList = () => {
+    const q = search.value.trim().toLowerCase();
+    list.replaceChildren(...heroes.filter(h => !enemies.includes(h.id) && h.name.toLowerCase().includes(q)).slice(0, 24).map(h => {
+      const b = el("button", { className: "chip", textContent: h.name });
+      b.onclick = () => { if (enemies.length < 5) { enemies.push(h.id); drawSel(); drawList(); } }; return b; }));
+  };
+  const drawSel = async () => {
+    sel.replaceChildren(...(enemies.length ? enemies.map(id => { const b = el("button", { className: "chip sel", textContent: heroes.find(h => h.id === id).name + " ✕" });
+      b.onclick = () => { enemies = enemies.filter(x => x !== id); drawSel(); drawList(); }; return b; }) : [empty("Пока никого")]));
+    if (!enemies.length) return res.replaceChildren(empty("—"));
+    res.replaceChildren(empty("Считаю…"));
+    try {
+      const r = await api("/api/pick?enemies=" + enemies.join(","));
+      res.replaceChildren(...(r.length ? r.map(x => el("div", { className: "row" }, el("span", { textContent: x.name }), el("b", { textContent: x.wr + "%" }))) : [empty("Мало данных")]));
+    } catch (e) { res.replaceChildren(empty("Ошибка загрузки")); }
+  };
+  search.oninput = drawList; drawList(); drawSel();
+}
+
+const ROLES = ["Керри", "Мид", "Оффлейн", "Саппорт 4", "Саппорт 5"], RANKS = ["Herald", "Guardian", "Crusader", "Archon", "Legend", "Ancient", "Divine", "Immortal"], TIMES = ["Утро", "День", "Вечер", "Ночь"];
+const select = (opts, val, ph) => { const s = el("select", {}, el("option", { value: "", textContent: ph }), ...opts.map(o => el("option", { value: o, textContent: o }))); s.value = val || ""; return s; };
+let partyRole = "";
+async function partyTab() {
+  root.replaceChildren(el("h1", { textContent: "Поиск пати" }), empty("Загружаю…"));
+  let d;
+  try { d = await api("/api/party" + (partyRole ? "?role=" + encodeURIComponent(partyRole) : "")); }
+  catch (e) { return root.replaceChildren(el("h1", { textContent: "Поиск пати" }), el("div", { className: "err", textContent: e.message })); }
+  const m = d.mine || {};
+  const role = select(ROLES, m.role, "Роль"), rank = select(RANKS, m.rank, "Ранг"), time = select(TIMES, m.play_time, "Когда играешь");
+  const note = el("input", { placeholder: "Пара слов о себе (необязательно)", value: m.note || "", maxLength: 120 });
+  const msg = el("div", { className: "err" });
+  const save = el("button", { textContent: d.mine ? "Обновить анкету" : "Опубликовать анкету" });
+  save.onclick = async () => {
+    try { await api("/api/party", { method: "POST", body: JSON.stringify({ role: role.value, rank: rank.value, time: time.value, note: note.value }) }); partyTab(); }
+    catch (e) { msg.textContent = e.message; }
+  };
+  const acts = el("div", { className: "acts" }, save);
+  if (d.mine) { const del = el("button", { className: "ghost", textContent: "Убрать" }); del.onclick = async () => { await api("/api/party", { method: "DELETE" }); partyTab(); }; acts.append(del); }
+  const filter = select(ROLES, partyRole, "Все роли"); filter.onchange = () => { partyRole = filter.value; partyTab(); };
+  const myId = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user.id : 0;
+  root.replaceChildren(el("h1", { textContent: "Поиск пати" }), empty("Анкеты живут 14 дней"),
+    el("div", { className: "card" }, role, rank, time, note, acts, msg), sec("Игроки"), filter,
+    d.list.length ? d.list.map(p => {
+      const w = el("div", { className: "row" }, el("span", {}, p.name, el("small", { textContent: p.role + ", " + p.rank + ", " + p.play_time + (p.note ? " · " + p.note : "") })));
+      if (p.username && p.tg_id !== myId) { const b = el("button", { textContent: "Написать" }); b.onclick = () => { const u = "https://t.me/" + p.username; tg ? tg.openTelegramLink(u) : window.open(u); }; w.append(b); }
+      return w; }) : empty("Анкет пока нет. Будь первым."));
+}
+
+
+const SUB = ["timers", "quiz", "news"];
+const back = () => { const b = el("button", { className: "ghost", textContent: "← Ещё" }); b.onclick = () => go("more"); return b; };
+const title = t => el("h1", { textContent: t, style: "margin-top:14px" });
+
+function moreTab() {
+  root.replaceChildren(title("Ещё"), empty("Инструменты и игры"),
+    ...[["timers", "Таймеры", "Руны и Рошан"], ["quiz", "Викторина", "Герой по картинке или способности"], ["news", "Новости", "Патчи и новости Dota 2"]].map(([id, t, s]) => {
+      const r = el("div", { className: "row", style: "cursor:pointer" }, el("span", {}, t, el("small", { textContent: s })), el("b", { textContent: "›" }));
+      r.onclick = () => go(id); return r; }));
+}
+
+// [название, первое появление (сек), интервал (сек)]. Если Valve изменит время, правь здесь.
+const RUNES = [["Баунти-руна", 0, 240], ["Руна силы", 360, 120], ["Руна мудрости", 420, 420]];
+function timersTab() {
+  const out = el("div"), inp = el("input", { placeholder: "Время на игровых часах, например 12:30" });
+  const sync = el("button", { textContent: "Синхронизировать" }), kill = el("button", { textContent: "Рошан убит" }), reset = el("button", { className: "ghost", textContent: "Сбросить всё" });
+  sync.onclick = () => { const m = inp.value.trim().match(/^(\d+):(\d{2})$/); if (m) { store("gstart", String(Date.now() - (Number(m[1]) * 60 + Number(m[2])) * 1000)); tick(); } };
+  kill.onclick = () => { store("rosh", String(Date.now())); tick(); };
+  reset.onclick = () => { store("rosh", null); store("gstart", null); tick(); };
+  root.replaceChildren(back(), title("Таймеры"), empty("Введи время на игровых часах и нажми «Синхронизировать»"), inp,
+    el("div", { className: "acts", style: "margin-bottom:16px" }, sync, kill), out, el("p", {}, reset),
+    empty("Расписание рун по патчу 7.41, после обновлений сверяй в игре."));
+  const blk = (l, v) => el("div", { className: "card" }, el("small", { textContent: l, style: "color:var(--mu)" }), el("div", { className: "big", textContent: v }));
+  const left = s => s > 0 ? mmss(Math.ceil(s)) : "готово";
+  function tick() {
+    const g0 = Number(store("gstart")), r0 = Number(store("rosh")), c = [];
+    if (g0) {
+      const t = (Date.now() - g0) / 1000;
+      c.push(blk("Игровое время", mmss(Math.floor(t))));
+      RUNES.forEach(([n, f, e]) => c.push(blk(n + " через", left((t < f ? f : f + (Math.floor((t - f) / e) + 1) * e) - t))));
+      const w = [120, 240].find(x => x > t); if (w) c.push(blk("Водная руна через", left(w - t)));
+    }
+    if (r0) {
+      const s = (Date.now() - r0) / 1000;
+      c.push(blk("Эгида исчезнет через", left(300 - s)), blk("Рошан может появиться через", left(480 - s)), blk("Рошан точно появится через", left(660 - s)));
+    }
+    out.replaceChildren(...(c.length ? c : [empty("Таймеры не запущены")]));
+  }
+  tick(); timer = setInterval(tick, 1000);
+}
+
+let streak = 0, quizMode = "hero";
+async function quizTab() {
+  const mode = quizMode, head = [back(), title("Викторина")];
+  const modes = el("div", { className: "acts", style: "margin-bottom:14px" }, ...[["hero", "Герой"], ["ability", "Способность"]].map(([m, l]) => {
+    const b = el("button", { className: m === mode ? "" : "ghost", textContent: l }); b.onclick = () => { quizMode = m; quizTab(); }; return b; }));
+  root.replaceChildren(...head, modes, empty("Загружаю…"));
+  let q; try { q = await api("/api/quiz?mode=" + mode); } catch (e) { return root.replaceChildren(...head, el("div", { className: "err", textContent: e.message })); }
+  const img = el("img", { src: q.image, style: "width:100%;max-width:240px;border-radius:14px;background:var(--s2);display:block;margin:0 auto 14px" });
+  const res = el("p", { className: "sub", textContent: "Серия: " + streak, style: "text-align:center" }), btns = [];
+  q.options.forEach(o => {
+    const b = el("button", { className: "chip", textContent: o.name, style: "width:100%;margin-bottom:8px;padding:13px" });
+    b.onclick = () => {
+      btns.forEach(x => x.disabled = true);
+      const ok = o.id === q.answer; streak = ok ? streak + 1 : 0;
+      res.textContent = ok ? "Верно! Серия: " + streak : "Нет, это " + q.options.find(x => x.id === q.answer).name;
+      const next = el("button", { textContent: "Дальше", style: "width:100%" }); next.onclick = quizTab; root.append(next);
+    };
+    btns.push(b);
+  });
+  root.replaceChildren(...head, modes, img, res, ...btns);
+}
+
+async function newsTab() {
+  root.replaceChildren(back(), title("Новости"), empty("Загружаю…"));
+  try {
+    const d = await api("/api/news");
+    root.replaceChildren(back(), title("Новости"), empty("Патчи и новости Dota 2"), ...(d.length ? d.map(n => {
+      const r = el("div", { className: "row", style: "cursor:pointer" }, el("span", {}, n.title, el("small", { textContent: new Date(n.date * 1000).toLocaleDateString("ru-RU") })));
+      r.onclick = () => tg ? tg.openLink(n.url) : window.open(n.url); return r; }) : [empty("Новостей пока нет")]));
+  } catch (e) { root.replaceChildren(back(), el("div", { className: "err", textContent: e.message })); }
+}
+
+acc ? load(acc) : go("profile");
 </script>
 </body>
 </html>
-
