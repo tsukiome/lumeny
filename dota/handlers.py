@@ -32,7 +32,7 @@ async def menu(m: Message):
 async def _acc(m: Message, command: CommandObject):
     if command.args:
         return api.to_account_id(command.args.split()[0])
-    return db.get_account(m.from_user.id)
+    return await db.get_account(m.from_user.id)
 
 
 @router.message(Command("link"))
@@ -45,8 +45,8 @@ async def link(m: Message, command: CommandObject):
         return await m.answer("Профиль не найден. Проверь ID.")
     name = p["profile"].get("personaname") or str(acc)
     rm = await api.get(f"/players/{acc}/recentMatches", ttl=0)
-    db.set_account(m.from_user.id, acc)
-    db.watch(m.from_user.id, acc, name, rm[0]["match_id"] if rm else 0)
+    await db.set_account(m.from_user.id, acc)
+    await db.watch(m.from_user.id, acc, name, rm[0]["match_id"] if rm else 0)
     await m.answer(f"✅ Привязан: <b>{e(name)}</b>. Теперь /profile и уведомления о твоих матчах.", parse_mode="HTML")
 
 
@@ -137,7 +137,7 @@ async def watch(m: Message, command: CommandObject):
         return await m.answer("Профиль не найден.")
     name = p["profile"].get("personaname") or str(acc)
     rm = await api.get(f"/players/{acc}/recentMatches", ttl=0)
-    db.watch(m.from_user.id, acc, name, rm[0]["match_id"] if rm else 0)
+    await db.watch(m.from_user.id, acc, name, rm[0]["match_id"] if rm else 0)
     await m.answer(f"👀 Слежу за <b>{e(name)}</b>. Напишу, когда он закончит катку.", parse_mode="HTML")
 
 
@@ -146,13 +146,13 @@ async def unwatch(m: Message, command: CommandObject):
     acc = api.to_account_id(command.args or "")
     if not acc:
         return await m.answer("Использование: /unwatch 123456789")
-    db.unwatch(m.from_user.id, acc)
+    await db.unwatch(m.from_user.id, acc)
     await m.answer("Готово.")
 
 
 @router.message(Command("watchlist"))
 async def watchlist(m: Message):
-    rows = db.my_watch(m.from_user.id)
+    rows = await db.my_watch(m.from_user.id)
     if not rows:
         return await m.answer("Список пуст. /watch ID")
     await m.answer("\n".join(f"• {e(n)} — {a}" for a, n in rows), parse_mode="HTML")
@@ -180,7 +180,7 @@ async def quiz_answer(c: CallbackQuery):
     _, right, chosen = c.data.split(":")
     names = await api.hero_names()
     if right == chosen:
-        db.add_point(c.from_user.id, c.from_user.full_name)
+        await db.add_point(c.from_user.id, c.from_user.full_name)
         res = f"✅ Верно! Это {names.get(int(right), '?')}. +1 очко"
     else:
         res = f"❌ Нет. Это был {names.get(int(right), '?')}"
@@ -190,7 +190,7 @@ async def quiz_answer(c: CallbackQuery):
 
 @router.message(Command("top"))
 async def top(m: Message):
-    rows = db.top()
+    rows = await db.top()
     if not rows:
         return await m.answer("Пока никто не играл. /quiz")
     medals = ["🥇", "🥈", "🥉"]
