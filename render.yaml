@@ -11,5 +11,7 @@ services:
         value: 3.12.7
       - key: BOT_TOKEN
         sync: false
+      - key: DATABASE_URL
+        sync: false
       - key: OPENDOTA_KEY
         sync: false
