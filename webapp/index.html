@@ -1,1 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lumeny</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --bg:var(--tg-theme-bg-color,#fff);--text:var(--tg-theme-text-color,#1b1f24);
+  --hint:var(--tg-theme-hint-color,#6b7480);--card:var(--tg-theme-secondary-bg-color,#f2f4f6);
+  --btn:var(--tg-theme-button-color,#2f7d4f);--btn-text:var(--tg-theme-button-text-color,#fff);
+  --radiant:#3f9b5c;--dire:#c4473a;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:16px 16px 32px;background:var(--bg);color:var(--text);
+  font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+h1{font-size:24px;margin:0 0 2px}
+h2{font-size:15px;margin:24px 0 8px;color:var(--hint);font-weight:600}
+.sub{color:var(--hint);margin:0 0 16px}
+form{display:flex;gap:8px;margin-bottom:8px}
+input{flex:1;min-width:0;padding:12px;border-radius:10px;border:1px solid var(--card);
+  background:var(--card);color:var(--text);font:inherit}
+button{padding:12px 16px;border:0;border-radius:10px;background:var(--btn);color:var(--btn-text);font:inherit;font-weight:600}
+.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:var(--dire)}
+.bar i{background:var(--radiant);display:block}
+.stats{display:flex;justify-content:space-between;margin:6px 0 0;color:var(--hint);font-size:14px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;
+  background:var(--card);border-radius:10px;margin-bottom:6px;border-left:4px solid var(--hint)}
+.row.w{border-left-color:var(--radiant)}.row.l{border-left-color:var(--dire)}
+.row small{color:var(--hint);display:block}
+.err{color:var(--dire);margin:12px 0}
+@media (prefers-reduced-motion:no-preference){.bar i{transition:width .5s}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const tg = window.Telegram && Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+const root = document.getElementById("root");
+
+function el(tag, props = {}, ...kids) {
+  const n = document.createElement(tag);
+  Object.assign(n, props);
+  kids.flat().forEach(k => n.append(k));
+  return n;
+}
+function store(key, val) {
+  try { if (val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); } catch (e) { return null; }
+}
+const mmss = s => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+
+function form(msg) {
+  const input = el("input", { placeholder: "Friend ID или Steam64", inputMode: "numeric" });
+  const f = el("form", {}, input, el("button", { textContent: "Показать" }));
+  f.onsubmit = e => { e.preventDefault(); if (input.value.trim()) load(input.value.trim()); };
+  return [el("h1", { textContent: "Lumeny" }), el("p", { className: "sub", textContent: "Профиль Dota 2" }), f,
+          msg ? el("div", { className: "err", textContent: msg }) : ""];
+}
+
+async function load(acc) {
+  root.replaceChildren(el("p", { className: "sub", textContent: "Загружаю…" }));
+  try {
+    const r = await fetch("/api/profile/" + encodeURIComponent(acc));
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Ошибка");
+    store("acc", acc);
+    render(d);
+  } catch (e) {
+    root.replaceChildren(...form(e.message));
+  }
+}
+
+function render(d) {
+  const total = d.win + d.lose;
+  const pct = total ? (d.win / total * 100) : 0;
+  const bar = el("div", { className: "bar" }, el("i", { style: "width:" + pct + "%" }));
+  const again = el("button", { textContent: "Другой игрок" });
+  again.onclick = () => root.replaceChildren(...form());
+  root.replaceChildren(
+    el("h1", { textContent: d.name }),
+    el("p", { className: "sub", textContent: d.rank }),
+    bar,
+    el("div", { className: "stats" },
+      el("span", { textContent: d.win + " побед" }),
+      el("span", { textContent: total ? pct.toFixed(1) + "%" : "—" }),
+      el("span", { textContent: d.lose + " поражений" })),
+    el("h2", { textContent: "Любимые герои" }),
+    d.heroes.length ? d.heroes.map(h => el("div", { className: "row" },
+      el("span", { textContent: h.name }),
+      el("span", { textContent: h.games + " игр, " + Math.round(h.win / h.games * 100) + "%" })))
+      : el("p", { className: "sub", textContent: "Нет данных" }),
+    el("h2", { textContent: "Последние матчи" }),
+    d.matches.length ? d.matches.map(m => el("div", { className: "row " + (m.win ? "w" : "l") },
+      el("span", {}, m.hero, el("small", { textContent: (m.win ? "Победа" : "Поражение") + ", " + mmss(m.duration) })),
+      el("b", { textContent: m.k + "/" + m.d + "/" + m.a })))
+      : el("p", { className: "sub", textContent: "Матчей нет или история скрыта" }),
+    el("p", {}, again)
+  );
+}
+
+const fromUrl = new URLSearchParams(location.search).get("acc");
+const acc = fromUrl || store("acc");
+acc ? load(acc) : root.replaceChildren(...form());
+</script>
+</body>
+</html>
 
