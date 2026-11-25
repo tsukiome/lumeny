@@ -12,7 +12,11 @@ async def health(request):
 
 
 async def index(request):
-    return web.FileResponse(WEB / "index.html")
+    f = WEB / "index.html"
+    if not f.exists():
+        return web.Response(status=404, text="Не найден файл webapp/index.html в репозитории")
+    return web.Response(text=f.read_text(encoding="utf-8"),
+                        content_type="text/html", charset="utf-8")
 
 
 async def profile(request):
